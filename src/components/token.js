@@ -1,9 +1,10 @@
 import React, { Component } from "react";
-import axios from 'axios';
+import axios from "axios";
+const Web3Utils = require("web3-utils");
 
 const api = axios.create({
-  baseURL: 'https://ipfs.infura.io/ipfs/'
-})
+  baseURL: "https://ipfs.infura.io/ipfs/",
+});
 
 class Token extends Component {
   state = {
@@ -11,11 +12,13 @@ class Token extends Component {
     name: "",
     price: 0,
     img: "",
-  }
+  };
   componentWillMount() {
-    api.get(this.props.card).then(res => {
+    api.get(this.props.token.card).then((res) => {
       this.setState({ name: res.data.name });
-      this.setState({ price: res.data.price });
+      this.setState({
+        price: Web3Utils.fromWei(this.props.token.price.toString(), "ether"),
+      });
       this.setState({ img: res.data.image });
       this.setState({ minter: res.data.minter });
     });
@@ -23,7 +26,7 @@ class Token extends Component {
 
   render() {
     return (
-      <div className="card mr-3 ml-3" key={this.props.keys}>
+      <div className="card mr-1 ml-4 mb-3" key={this.props.keys}>
         <div className="card-header">
           <small className="text-muted">
             Minted By :{" "}
@@ -40,12 +43,18 @@ class Token extends Component {
             <img width="200" height="250" src={this.state.img} alt="Card" />
           </li>
           <li key={this.props.keys} className="list-group-item py-2">
-            <small className="float-left mt-1 ">
-              {this.state.name}
-            </small>
-            <small className="float-right mt-1 ">
-              {this.state.price +" ETH"}
-            </small>
+            {this.props.frm == 0 ? (
+              <small className="float-left mt-1 ">{this.state.name}</small>
+            ) : (
+              <small className=" mt-1 ">{this.state.name}</small>
+            )}
+            {this.props.frm == 0 ? (
+              <small className="float-right mt-1 font-weight-bold">
+                {this.state.price + " ETH"}
+              </small>
+            ) : (
+              <span></span>
+            )}
           </li>
         </ul>
       </div>
