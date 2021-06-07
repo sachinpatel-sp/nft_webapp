@@ -116,7 +116,6 @@ class Content extends Component {
       const imageLink = "https://ipfs.infura.io/ipfs/" + result[0].hash;
       const data = JSON.stringify({
         name: this.state.name,
-        price: this.state.price,
         image: imageLink,
         minter: this.props.account,
       });
@@ -140,7 +139,7 @@ class Content extends Component {
         <div className="row">
           <main role="main" className="col-lg-12 d-flex ">
             <div className="content mr-auto ml-auto mt-5">
-              <h2 className="ml-5">Issue New Tokens</h2>
+              <h2 className="ml-5">Issue New Token</h2>
               <form id="form" onSubmit={this.onSubmit}>
                 <div class="input-group mb-3">
                   <div class="input-group-prepend">
