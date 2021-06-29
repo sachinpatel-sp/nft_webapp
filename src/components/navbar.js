@@ -32,6 +32,7 @@ class Navbar extends Component {
               className="ml-2"
               width="30"
               height="30"
+              alt="account_img"
               src={`data:image/png;base64,${new Identicon(
                 this.props.account,
                 30

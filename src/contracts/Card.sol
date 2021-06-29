@@ -18,13 +18,14 @@ contract Card is ERC721Enumerable{
           
      }
 
+     event transfer(uint id,address from,address to,uint time,uint eve);
+
      function mint(string memory _card,uint _price) public{
           require(!_cardExists[_card]);
-          //cards.push(_card);
-          //uint _id = cards.length - 1;
           uint _id = totalSupply();
           cards[_id] = Token(_id,_price,_card,true);
           _mint(msg.sender,_id);
+          emit transfer(_id,address(0),msg.sender,block.timestamp,0);
           _cardExists[_card] = true;
      }
 
@@ -35,6 +36,12 @@ contract Card is ERC721Enumerable{
           _owner.transfer(msg.value);
           cards[_id].listed = false;
           _transfer(_owner, msg.sender, _id);
+          emit transfer(_id,_owner,msg.sender,block.timestamp,1);
+     }
+
+     function gift(address _from,address _to, uint256 _id) public {
+          _transfer(_from, _to, _id);
+          emit transfer(_id,_from,_to,block.timestamp,2);
      }
 
      function list(uint _id,uint price) public{

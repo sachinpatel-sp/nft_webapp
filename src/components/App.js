@@ -3,8 +3,8 @@ import Web3 from "web3";
 import "./App.css";
 import Card from "../abis/Card.json";
 import Navbar from "./navbar";
-import Content from './content'
-import Owned from './owned'
+import Content from "./content";
+import Owned from "./owned";
 
 class App extends Component {
   async componentDidMount() {
@@ -30,7 +30,7 @@ class App extends Component {
 
     const networkId = await web3.eth.net.getId();
     const networkData = Card.networks[networkId];
-    
+
     if (networkData) {
       const abi = Card.abi;
       const address = networkData.address;
@@ -52,10 +52,24 @@ class App extends Component {
   render() {
     return (
       <div>
-        {this.state.account? <Navbar account={this.state.account} />:<span></span>}
-        {this.state.contract ? <Content account={this.state.account} contract={this.state.contract} /> : <span>Loading....</span>}
-        {this.state.contract ? <Owned account={this.state.account} contract={this.state.contract} /> : <span>Loading....</span>}
-        
+        {this.state.account ? (
+          <Navbar account={this.state.account} />
+        ) : (
+          <span></span>
+        )}
+        {this.state.contract ? (
+          <Content
+            account={this.state.account}
+            contract={this.state.contract}
+          />
+        ) : (
+          <span>Loading....</span>
+        )}
+        {this.state.contract ? (
+          <Owned account={this.state.account} contract={this.state.contract} />
+        ) : (
+          <span>Loading....</span>
+        )}
       </div>
     );
   }

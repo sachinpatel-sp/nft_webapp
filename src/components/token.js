@@ -22,6 +22,7 @@ class Token extends Component {
       this.setState({ img: res.data.image });
       this.setState({ minter: res.data.minter });
     });
+    console.log(this.props.token.card);
   }
 
   render() {
@@ -30,7 +31,7 @@ class Token extends Component {
         <div className="card-header">
           <small className="text-muted">
             Minted By :{" "}
-            {this.state.minter.substring(0, 4) +
+            {this.state.minter.substring(0, 6) +
               "...." +
               this.state.minter.substring(
                 this.state.minter.length - 4,

@@ -9,10 +9,13 @@ class Owned extends Component {
       total: 0,
       tokens: [],
       index: [],
+      history: [],
       address: "",
+      loading: true,
     };
     this.gift = this.gift.bind(this);
     this.delist = this.delist.bind(this);
+    this.transactionHistory = this.transactionHistory.bind(this);
     this.captureAddress = this.captureAddress.bind(this);
   }
 
@@ -22,14 +25,14 @@ class Owned extends Component {
     this.setState({ address });
   }
 
-     async gift(key) {
+  async gift(key) {
     if (this.state.tokens[key].listed) {
       window.alert("Delist before gifting.");
       return;
     }
     if (this.props.account !== this.state.address) {
       await this.props.contract.methods
-        .transferFrom(
+        .gift(
           this.props.account,
           this.state.address,
           this.state.index[key]
@@ -66,6 +69,37 @@ class Owned extends Component {
       });
   }
 
+  async transactionHistory(key) {
+    var eve = await this.props.contract.getPastEvents("transfer", {
+      filter: {id: key },
+      fromBlock: 0,
+      toBlock: "latest",
+    });
+    this.setState({history: []})
+    console.log(eve);
+    for (var i = 1; i <= eve.length; i++){
+      var unixTimestamp = parseInt(eve[i - 1].returnValues.time);
+      var date = new Date(unixTimestamp * 1000);
+      date = new Date(date).toLocaleString(undefined, {
+        timeZone: "Asia/Kolkata",
+      });
+      var method = parseInt(eve[i - 1].returnValues.eve) == 0 ? "Created" : (parseInt(eve[i-1].returnValues.eve) == 1 ? "Sold":"Gifted");
+      const data = JSON.stringify({
+        from: eve[i - 1].returnValues.from,
+        to: eve[i - 1].returnValues.to,
+        id: eve[i - 1].returnValues.id,
+        date: date,
+        event: method
+      });
+
+      data = JSON.parse(data);
+      if (parseInt(eve[i - 1].returnValues.id) == key) {
+        this.setState({ history: [...this.state.history, data] });
+      }
+    }
+    this.setState({ history: this.state.history.reverse() });
+  }
+
   async componentWillMount() {
     var total = 0;
     await this.props.contract.methods
@@ -73,7 +107,6 @@ class Owned extends Component {
       .call()
       .then(function(res) {
         total = res;
-        console.log(res);
       });
     total = parseInt(total._hex, 16);
     this.setState({ total });
@@ -97,6 +130,7 @@ class Owned extends Component {
         index: [...this.state.index, ind],
       });
     }
+    this.setState({ loading: false });
   }
   render() {
     return (
@@ -111,54 +145,98 @@ class Owned extends Component {
         <center>
           <h3>Balance : {this.state.total} Token(s)</h3>
         </center>
-        <div className="row text-center">
-          {this.state.tokens.map((token, key) => {
-            return (
-              <div>
-                <Token token={token} keys={key} key={key} frm="owned" />
-                <div class="form-group">
-                  <input
-                    type="email"
-                    class=" ml-4"
-                    id="exampleInputEmail1"
-                    aria-describedby="emailHelp"
-                    placeholder="Address or price"
-                    style={{ width: 240 }}
-                    onChange={this.captureAddress}
+        {this.state.loading ? (
+          <div id="loader" className="text-center">
+            <p className="text-center">Loading...</p>
+          </div>
+        ) : (
+          <div className="row text-center">
+            {this.state.tokens.map((token, key) => {
+              return (
+                <div key={key}>
+                  <Token token={token} keys={key} key={key} frm="owned" />
+                  <div class="form-group">
+                    <input
+                      type="email"
+                      class=" ml-4"
+                      aria-describedby="emailHelp"
+                      placeholder="Address or price"
+                      style={{ width: 240 }}
+                      onChange={this.captureAddress}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-dark mb-3 ml-3"
+                    style={{ width: 80 }}
                     key={key}
-                  />
+                    onClick={() => this.gift(key)}
+                  >
+                    Gift
+                  </button>
+                  {token.listed ? (
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      style={{ width: 80 }}
+                      key={key}
+                      onClick={() => this.delist(this.state.index[key])}
+                    >
+                      Delist
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      style={{ width: 80 }}
+                      key={key}
+                      onClick={() => this.list(this.state.index[key])}
+                    >
+                      List
+                    </button>
+                  )}
+                  <div key={key}>
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      key={key}
+                      onClick={() =>
+                        this.transactionHistory(this.state.index[key])
+                      }
+                    >
+                      Trading History
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-dark mb-3 ml-3"
-                  style={{ width: 80 }}
-                  onClick={() => this.gift(key)}
-                >
-                  Gift
-                </button>
-                {token.listed ? (
-                  <button
-                    type="button"
-                    className="btn btn-dark mb-3 ml-3"
-                    style={{ width: 80 }}
-                    onClick={() => this.delist(this.state.index[key])}
-                  >
-                    Delist
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-dark mb-3 ml-3"
-                    style={{ width: 80 }}
-                    onClick={() => this.list(this.state.index[key])}
-                  >
-                    List
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+        {this.state.history.length > 0 ? (
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col">Date,Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {this.state.history.map((token, key) => (
+                <tr>
+                  <td>{token.event}</td>
+                  <td>{token.from}</td>
+                  <td>{token.to}</td>
+                  <td>{token.date}</td>
+                </tr>
+              ))}
+              ;
+            </tbody>
+          </table>
+        ) : (
+          <span></span>
+        )}
       </div>
     );
   }

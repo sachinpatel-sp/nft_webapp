@@ -13,6 +13,7 @@ class Content extends Component {
       buffer: null,
       name: "",
       price: "",
+      loading: true,
     };
     this.captureFile = this.captureFile.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
@@ -27,8 +28,8 @@ class Content extends Component {
       .call()
       .then(function(res) {
         total = res;
-        console.log(res);
       });
+
     total = parseInt(total._hex, 16);
     this.setState({ totalSupply: total });
     for (var i = 1; i <= total; i++) {
@@ -53,7 +54,10 @@ class Content extends Component {
         owners: [...this.state.owners, owner],
       });
     }
+    this.setState({ loading: false });
+
   }
+
   floatToStr(num) {
     return num.toString().indexOf(".") === -1 ? num.toFixed(1) : num.toString();
   }
@@ -209,37 +213,43 @@ class Content extends Component {
         <center>
           <h3>In The Market</h3>
         </center>
-        <div className="row text-center">
-          {this.state.tokens.map((token, key) => {
-            return token.listed ? (
-              <div>
-                <Token token={token} keys={key} key={key} frm="0" />
-                {this.state.owners[key] == this.props.account ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="btn btn-dark mb-3 ml-3"
-                    style={{ width: 150 }}
-                    onClick={() => this.buy(key)}
-                  >
-                    Buy Now
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-dark mb-3 ml-3"
-                    style={{ width: 150 }}
-                    onClick={() => this.buy(key)}
-                  >
-                    Buy Now
-                  </button>
-                )}
-              </div>
-            ) : (
-              <span></span>
-            );
-          })}
-        </div>
+        {this.state.loading ? (
+          <div id="loader" className="text-center">
+            <p className="text-center">Loading...</p>
+          </div>
+        ) : (
+          <div className="row text-center">
+            {this.state.tokens.map((token, key) => {
+              return token.listed ? (
+                <div key={key}>
+                  <Token token={token} keys={key} key={key} frm="0" />
+                  {this.state.owners[key] == this.props.account ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="btn btn-dark mb-3 ml-3"
+                      style={{ width: 150 }}
+                      onClick={() => this.buy(key)}
+                    >
+                      Buy Now
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      style={{ width: 150 }}
+                      onClick={() => this.buy(key)}
+                    >
+                      Buy Now
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span key={key}></span>
+              );
+            })}
+          </div>
+        )}
         <hr />
       </div>
     );
