@@ -10,15 +10,27 @@ class Content extends Component {
       totalSupply: 0,
       tokens: [],
       owners: [],
+      auction: [],
+      end: [],
+      history: [],
       buffer: null,
       name: "",
-      price: "",
+      description: "",
       loading: true,
+      bid: 0,
     };
     this.captureFile = this.captureFile.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
     this.captureName = this.captureName.bind(this);
-    this.capturePrice = this.capturePrice.bind(this);
+    this.captureDes = this.captureDes.bind(this);
+    this.captureBid = this.captureBid.bind(this);
+    this.bidHistory = this.bidHistory.bind(this);
+  }
+
+  captureBid(event) {
+    event.preventDefault();
+    const bid = event.target.value;
+    this.setState({ bid });
   }
 
   async componentWillMount() {
@@ -44,6 +56,24 @@ class Content extends Component {
       this.setState({
         tokens: [...this.state.tokens, token],
       });
+      if (token.onAuction) {
+        await this.props.contract.methods
+          .auction(token.id)
+          .call()
+          .then(function(res) {
+            token = res;
+          });
+        this.setState({
+          auction: [...this.state.auction, token],
+        });
+        this.setState({
+          end: [...this.state.end, token.auctionEndTime],
+        });
+      } else {
+        this.setState({
+          end: [...this.state.end, 0],
+        });
+      }
       await this.props.contract.methods
         .ownerOf(i - 1)
         .call()
@@ -55,17 +85,15 @@ class Content extends Component {
       });
     }
     this.setState({ loading: false });
-
   }
 
   floatToStr(num) {
     return num.toString().indexOf(".") === -1 ? num.toFixed(1) : num.toString();
   }
 
-  mint = (card, price) => {
-    var value = this.floatToStr(price);
+  mint = (card) => {
     this.props.contract.methods
-      .mint(card, Web3Utils.toWei(value, "ether"))
+      .mint(card)
       .send({ from: this.props.account })
       .once("receipt", (receipt) => {
         this.setState({
@@ -85,16 +113,70 @@ class Content extends Component {
       });
   }
 
+  async bidHistory(key) {
+    var eve = await this.props.contract.getPastEvents("HighestBidIncreased", {
+      fromBlock: 0,
+      toBlock: "latest",
+    });
+    this.setState({ history: [] });
+    for (var i = 1; i <= eve.length; i++) {
+      var unixTimestamp = parseInt(eve[i - 1].returnValues.endTime);
+      const data = JSON.stringify({
+        bidder: eve[i - 1].returnValues.bidder,
+        amount: Web3Utils.fromWei(
+          parseInt(eve[i - 1].returnValues.amount._hex, 16).toString(),
+          "ether"
+        ),
+        id: parseInt(eve[i - 1].returnValues.id._hex, 16),
+        endTime: unixTimestamp,
+      });
+
+      data = JSON.parse(data);
+      if (data.id == key && this.state.end[key] == data.endTime) {
+        this.setState({ history: [...this.state.history, data] });
+      }
+      console.log(
+        data.id + " " + key + " " + this.state.end[key] + " " + data.endTime
+      );
+    }
+
+    this.setState({ history: this.state.history.reverse() });
+  }
+
+  async placeBid(key) {
+    console.log(key + " " + this.state.tokens[key]);
+    await this.props.contract.methods
+      .bid(key)
+      .send({
+        from: this.props.account,
+        value: Web3Utils.toWei(this.state.bid, "ether"),
+      })
+      .once("receipt", (receipt) => {
+        console.log(receipt);
+      });
+  }
+
+  async withdraw(key) {
+    await this.props.contract.methods
+      .auctionEnd(key)
+      .send({
+        from: this.props.account,
+      })
+      .once("receipt", (receipt) => {
+        console.log(receipt);
+      });
+  }
+
   captureName(event) {
     event.preventDefault();
     const name = event.target.value;
     this.setState({ name });
   }
 
-  capturePrice(event) {
+  captureDes(event) {
     event.preventDefault();
-    const price = event.target.value;
-    this.setState({ price });
+    const description = event.target.value;
+    this.setState({ description });
   }
 
   captureFile(event) {
@@ -120,6 +202,7 @@ class Content extends Component {
       const imageLink = "https://ipfs.infura.io/ipfs/" + result[0].hash;
       const data = JSON.stringify({
         name: this.state.name,
+        description: this.state.description,
         image: imageLink,
         minter: this.props.account,
       });
@@ -129,7 +212,7 @@ class Content extends Component {
           window.alert("Error occured while minting");
           return;
         }
-        this.mint(result[0].hash, this.state.price);
+        this.mint(result[0].hash);
       });
       document.getElementById("form").reset();
       this.setState({ name: "" });
@@ -170,17 +253,17 @@ class Content extends Component {
                       class="input-group-text"
                       id="inputGroup-sizing-default"
                     >
-                      Price
+                      Description
                     </span>
                   </div>
                   <input
                     type="text"
                     className="fom-control mb-2"
                     class="form-control"
-                    aria-label="Price"
+                    aria-label="Description"
                     aria-describedby="inputGroup-sizing-default"
                     required
-                    onChange={this.capturePrice}
+                    onChange={this.captureDes}
                   />
                 </div>
                 <div class="input-group mb-3">
@@ -222,7 +305,13 @@ class Content extends Component {
             {this.state.tokens.map((token, key) => {
               return token.listed ? (
                 <div key={key}>
-                  <Token token={token} keys={key} key={key} frm="0" />
+                  <Token
+                    token={token}
+                    keys={key}
+                    key={key}
+                    frm="0"
+                    auction={null}
+                  />
                   {this.state.owners[key] == this.props.account ? (
                     <button
                       type="button"
@@ -248,6 +337,121 @@ class Content extends Component {
                 <span key={key}></span>
               );
             })}
+          </div>
+        )}
+        <hr />
+
+        <center>
+          <h3>On Auction</h3>
+        </center>
+        {this.state.loading ? (
+          <div id="loader" className="text-center">
+            <p className="text-center">Loading...</p>
+          </div>
+        ) : (
+          <div className="row text-center">
+            {this.state.tokens.map((token, key) => {
+              return token.onAuction ? (
+                <div key={key}>
+                  <Token
+                    token={token}
+                    keys={key}
+                    key={key}
+                    frm="0"
+                    auction={this.state.auction[key]}
+                  />
+
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      class=" ml-4"
+                      aria-describedby="emailHelp"
+                      placeholder="Price"
+                      style={{ width: 240 }}
+                      onChange={this.captureBid}
+                    />
+                  </div>
+
+                  {parseInt(this.state.auction[key].auctionEndTime._hex, 16) <=
+                  Math.floor(Date.now() / 1000) ? (
+                    <div>
+                      {this.state.auction[key].beneficiary ==
+                        this.props.account ||
+                      this.state.auction[key].highestBidder ==
+                        this.props.account ? (
+                        <button
+                          type="button"
+                          className="btn btn-dark mb-3 ml-3"
+                          style={{ width: 150 }}
+                          onClick={() => this.withdraw(key)}
+                        >
+                          Withdraw
+                        </button>
+                      ) : (
+                        <span></span>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {this.state.auction[key].beneficiary !=
+                      this.props.account ? (
+                        <button
+                          type="button"
+                          className="btn btn-dark mb-3 ml-3"
+                          style={{ width: 150 }}
+                          onClick={() => this.placeBid(key)}
+                        >
+                          Place Bid
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="btn btn-dark mb-3 ml-3"
+                          style={{ width: 150 }}
+                        >
+                          Place Bid
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <div key={key}>
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      key={key}
+                      style={{ width: 200 }}
+                      onClick={() => this.bidHistory(key)}
+                    >
+                      Bidding History
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <span key={key}></span>
+              );
+            })}
+            {this.state.history.length > 0 ? (
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th scope="col">Bidder</th>
+                    <th scope="col">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {this.state.history.map((history, key) => (
+                    <tr>
+                      <td>{history.bidder}</td>
+                      <td>{history.amount}</td>
+                    </tr>
+                  ))}
+                  ;
+                </tbody>
+              </table>
+            ) : (
+              <span></span>
+            )}
           </div>
         )}
         <hr />

@@ -15,6 +15,7 @@ class Owned extends Component {
     };
     this.gift = this.gift.bind(this);
     this.delist = this.delist.bind(this);
+    this.auction = this.auction.bind(this);
     this.transactionHistory = this.transactionHistory.bind(this);
     this.captureAddress = this.captureAddress.bind(this);
   }
@@ -69,8 +70,17 @@ class Owned extends Component {
       });
   }
 
+  async auction(key) {
+    await this.props.contract.methods
+      .putOnAuction(key, this.state.address)
+      .send({ from: this.props.account })
+      .once("receipt", (receipt) => {
+        console.log(receipt);
+      });
+  }
+
   async transactionHistory(key) {
-    var eve = await this.props.contract.getPastEvents("transfer", {
+    var eve = await this.props.contract.getPastEvents("transfers", {
       filter: {id: key },
       fromBlock: 0,
       toBlock: "latest",
@@ -154,10 +164,10 @@ class Owned extends Component {
             {this.state.tokens.map((token, key) => {
               return (
                 <div key={key}>
-                  <Token token={token} keys={key} key={key} frm="owned" />
+                  <Token token={token} keys={key} key={key} frm="owned" auction={null}/>
                   <div class="form-group">
                     <input
-                      type="email"
+                      type="text"
                       class=" ml-4"
                       aria-describedby="emailHelp"
                       placeholder="Address or price"
@@ -165,36 +175,49 @@ class Owned extends Component {
                       onChange={this.captureAddress}
                     />
                   </div>
+                  {!token.onAuction && !token.listed?
                   <button
                     type="button"
                     className="btn btn-dark mb-3 ml-3"
-                    style={{ width: 80 }}
+                    style={{ width: 70 }}
                     key={key}
-                    onClick={() => this.gift(key)}
+                    onClick={() => this.auction(key)}
                   >
-                    Gift
-                  </button>
-                  {token.listed ? (
+                    Auction
+                  </button>:<span></span>}
+                  {token.listed && !token.onAuction ? (
                     <button
                       type="button"
                       className="btn btn-dark mb-3 ml-3"
-                      style={{ width: 80 }}
+                      style={{ width: 70 }}
                       key={key}
                       onClick={() => this.delist(this.state.index[key])}
                     >
                       Delist
                     </button>
-                  ) : (
+                  ) : <span></span>}
+                  {!token.onAuction && !token.listed?
                     <button
                       type="button"
                       className="btn btn-dark mb-3 ml-3"
-                      style={{ width: 80 }}
+                      style={{ width: 70 }}
                       key={key}
                       onClick={() => this.list(this.state.index[key])}
                     >
                       List
-                    </button>
-                  )}
+                    </button>:<span></span>}
+                  {
+                    !token.onAuction?
+                    <button
+                      type="button"
+                      className="btn btn-dark mb-3 ml-3"
+                      style={{ width: 75 }}
+                      key={key}
+                      onClick={() => this.gift(key)}
+                    >
+                      Gift
+                    </button>:<span></span>
+                  }
                   <div key={key}>
                     <button
                       type="button"

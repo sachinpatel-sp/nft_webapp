@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import axios from "axios";
+import Countdown from "react-countdown";
 const Web3Utils = require("web3-utils");
 
 const api = axios.create({
@@ -38,6 +39,13 @@ class Token extends Component {
                 this.state.minter.length
               )}
           </small>
+          {this.props.auction != null ? (
+            <Countdown
+              date={parseInt(this.props.auction.auctionEndTime._hex, 16) * 1000}
+            ></Countdown>
+          ) : (
+            <span></span>
+          )}
         </div>
         <ul id="image" className="list-group list-group-flush">
           <li className="list-group-item">
@@ -50,9 +58,18 @@ class Token extends Component {
               <small className=" mt-1 ">{this.state.name}</small>
             )}
             {this.props.frm == 0 ? (
-              <small className="float-right mt-1 font-weight-bold">
-                {this.state.price + " ETH"}
-              </small>
+              <div>
+                {this.props.auction == null ? (
+                  <small className="float-right mt-1 font-weight-bold">
+                    {this.state.price + " ETH"}
+                  </small>
+                ) : (
+                  <small className="float-right mt-1 font-weight-bold">
+                    {Web3Utils.fromWei(String(this.props.auction.highestBid), "ether") +
+                      " ETH"}
+                  </small>
+                )}
+              </div>
             ) : (
               <span></span>
             )}

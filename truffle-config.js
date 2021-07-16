@@ -1,6 +1,5 @@
-require('babel-register');
-require('babel-polyfill');
-require("dotenv").config();
+require("babel-register");
+require("babel-polyfill");
 const HDWalletProvider = require("truffle-hdwallet-provider");
 const MNEMONIC =
   "struggle display effort bus moon dog avoid divide naive feed awful blood";
@@ -14,7 +13,7 @@ module.exports = {
     ropsten: {
       provider: function() {
         return new HDWalletProvider(
-           MNEMONIC,
+          MNEMONIC,
           "https://ropsten.infura.io/v3/8ff5750c816649738c55d963982d8ca4"
         );
       },
